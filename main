@@ -1,0 +1,163 @@
+#! /usr/bin/env python
+#coding=utf-8
+#! /usr/bin/env python
+#coding=utf-8
+import unpack2
+import datatest
+import analyse
+import pandas as pd
+import numpy as np
+import datetime
+import matplotlib.pyplot as plt
+from statsmodels.graphics.tsaplots import plot_acf
+from statsmodels.graphics.tsaplots import plot_pacf
+from statsmodels.tsa.stattools import adfuller as ADF
+from statsmodels.stats.diagnostic import acorr_ljungbox
+from statsmodels.tsa.arima_model import ARIMA
+from statsmodels.tsa.arima_model import ARMA
+
+
+timeseries=unpack2.divide()
+for timesery in timeseries:
+    c=0
+    while c+380<len(timesery): 
+        foretime=[]
+        foredta=[]
+        for w in range(100):
+            b=timesery[c:c+80]
+            datresult=ARIMA(b,order=(3,1,0)).fit()
+            #datatest.datatest(b)
+            g,h,j=datresult.forecast(3)
+            for q in range(3):
+                foretime.append(timesery.index[c+80+q])
+            foredta.extend(g)
+            c+=3
+        
+        
+        h=pd.DataFrame(foredta,index=foretime)                              
+        j=timesery[c-220:c+80]
+
+        #预测加实际线
+        plt.plot(h,label='forecast')
+        plt.plot(j,label='real')
+        plt.xlabel='time'
+        plt.ylabel='prize'
+        plt.legend(loc='best',fancybox=True,framealpha=0.5)
+        #plt.show()
+        mean=np.mean(j.values)
+        print('real var',np.var(j.values))
+        print('real std',np.std(j.values))
+        print('minus var',np.var(h.values-j.values))
+        print('minus std',np.std(h.values-j.values))
+
+
+        #显示差值图
+        lower_bound=[]
+        upper_bound=[]
+        jvalues=[]
+        min1=[]
+        min2=[]
+        for x in range(len(j.values)):
+            lower_bound.append(h.values[x][0] - 100)
+            upper_bound.append(h.values[x][0] + 100)
+            jvalues.append(j.values[x][0])
+            if j.values[x][0]>h.values[x][0]+100:
+                min1.append(True)
+            else:
+                min1.append(False)
+            if j.values[x][0]<h.values[x][0]-100:
+                min2.append(True)
+            else:
+                min2.append(False)
+        fig, ax = plt.subplots(1)
+        ax.plot(h.index, h.values, lw=1, label='forecast', color='black',ls='--')
+        ax.plot(j.index, j.values, lw=2, label='real', color='blue')
+        ax.fill_between(h.index, lower_bound, upper_bound, facecolor='yellow', alpha=0.2, label='100')
+        ax.legend(loc='best',fancybox=True,framealpha=0.5)
+        ax.fill_between(h.index, upper_bound, jvalues, where=min1, facecolor='blue', alpha=0.2)
+        ax.fill_between(h.index, lower_bound, jvalues, where=min2, facecolor='blue',alpha=0.2)
+        ax.set_xlabel('time')
+        ax.set_ylabel('prize')
+        #plt.show()
+
+        #显示差
+        fig,ax = plt.subplots(1)
+        minus=j.values-h.values
+        ax.scatter(j.index, minus, linewidths=5, label='minus', color='blue')
+        for x in range(len(minus)):
+            ax.fill_between(j.index[x:x+1],0,minus[x],facecolor='black',alpha=1)
+        ax.fill_between(timesery.index,-100, 100, facecolor='blue',alpha=0.2)
+        axis=ax.yaxis
+        for line in ax.yaxis.get_ticklines():
+            line.set_markeredgewidth(1)
+            line.set_markersize(560)
+            line.set_color('black')
+        plt.legend()
+        #plt.show()
+        print('ave',np.mean(minus))
+        print('var',np.var(minus))
+        print('std',np.std(minus))
+
+        #趋势图
+        up=[]
+        down=[]
+        x=0
+        while x<len(j)-1:
+            if h.values[x+1][0]>h.values[x][0]+25:
+                if j.values[x+1][0]>j.values[x][0]:
+                    up.append(x)
+                else:
+                    pass
+            elif h.values[x+1][0]<h.values[x][0]-25:
+                if j.values[x+1][0]<j.values[x][0]:
+                    up.append(x)
+                else:
+                    pass
+            x+=1
+        x=0
+        while x<len(j)-1:
+            if h.values[x+1][0]>h.values[x][0]+50:
+                if j.values[x+1][0]<j.values[x][0]:
+                    down.append(x)
+                else:
+                    pass
+            elif h.values[x+1][0]<h.values[x][0]-50:
+                if j.values[x+1][0]>j.values[x][0]:
+                    down.append(x)
+                else:
+                     pass
+            x+=1
+        plt.subplots(1)
+        plt.plot(h,label='forecast')
+        plt.plot(j,label='real')
+        for x in up:
+            plt.fill_between(j.index[x:x+2],12200,13000,facecolor='green',alpha=0.2,label='right')
+        for x in down:
+            plt.fill_between(j.index[x:x+2],12200,13000,facecolor='red',alpha=0.2,label='wrong')
+        #plt.show()
+        print('right',float(len(up))/float(len(j)))
+        print('wrong',float(len(down))/float(len(j)))
+
+        #期望
+        pronut=pd.DataFrame({'pronut':0},index=j.index)
+        while x<len(j)-1:
+            if h.values[x+1][0]>h.values[x][0]+25:
+                pronut.values[x][0]=j.values[x+1][0]-j.values[x][0]
+            elif h.values[x+1][0]<h.values[x][0]-25:
+                pronut.values[x][0]=j.values[x][0]-j.values[x+1][0]
+            x+=1
+        print('ave',np.mean(pronut))
+        print('var',np.var(pronut))
+        print('std',np.std(pronut))
+        fig,ax=plt.subplots(1)
+        ax.scatter(pronut.index,pronut.values, linewidths=5, label='pronut', color='blue')
+        for x in range(len(pronut)):
+            ax.fill_between(j.index[x:x+1],0,pronut.values[x][0],facecolor='black',alpha=1)
+        axis=ax.yaxis
+        for line in ax.yaxis.get_ticklines():
+            line.set_markeredgewidth(1)
+            line.set_markersize(560)
+            line.set_color('black')
+        plt.legend()
+        #plt.show()
+        c-=10
