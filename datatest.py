@@ -16,16 +16,12 @@ def datatest(dftimeseries):
     #plot_pacf(dftimeseries).show()                      #原始偏自相关图
     #print(u'adf test result:', ADF(dftimeseries[u'timeseries']))    #原始数据adf值
     timeseries = dftimeseries.diff().dropna()
-    timeseries.columns = [u'buydiff']
+    timeseries.columns = [u'timeseries']
     timeseries.plot() 
     plt.show()                                   #差分数据图
-    plot_acf(timeseries)
+    plot_acf(timeseries,lags=40)
     plt.show()                       #差分自相关图
-    plot_pacf(timeseries)
+    plot_pacf(timeseries,lags=40)
     plt.show()                      #差分偏自相关图
-    x=0
-    c=[]
-    while x<len(timeseries):
-        c.append(timeseries[x][0])
-    print(u'diff adf test result:',ADF(c))     #差分数据adf值
-    print(u'Ljung-Box test result:',acorr_ljungbox(c, lags=1))    #差分序列的白噪声检验结果
+    print(u'diff adf test result:',ADF(timeseries[u'timeseries']))     #差分数据adf值
+    print(u'Ljung-Box test result:',acorr_ljungbox(timeseries, lags=1))    #差分序列的白噪声检验结果
