@@ -18,13 +18,18 @@ from statsmodels.tsa.arima_model import ARMA
 
 
 timeseries=unpack2.divide()
+
 for timesery in timeseries:
+    print timesery
     c=0
     while c+380<len(timesery): 
         foretime=[]
         foredta=[]
         for w in range(100):
             b=timesery[c:c+80]
+            if b.values[40]==b.values[50]==b.values[60]==b.values[70]==b.values[79]:
+                c+=(100-w)*3
+                break
             datresult=ARIMA(b,order=(3,1,0)).fit()
             #datatest.datatest(b)
             g,h,j=datresult.forecast(3)
@@ -36,21 +41,20 @@ for timesery in timeseries:
         
         h=pd.DataFrame(foredta,index=foretime)                              
         j=timesery[c-220:c+80]
-
         #预测加实际线
         plt.plot(h,label='forecast')
         plt.plot(j,label='real')
         plt.xlabel='time'
         plt.ylabel='prize'
         plt.legend(loc='best',fancybox=True,framealpha=0.5)
-        #plt.show()
+        plt.show()
         mean=np.mean(j.values)
         print('real var',np.var(j.values))
         print('real std',np.std(j.values))
         print('minus var',np.var(h.values-j.values))
         print('minus std',np.std(h.values-j.values))
-
-
+        
+        
         #显示差值图
         lower_bound=[]
         upper_bound=[]
@@ -78,27 +82,24 @@ for timesery in timeseries:
         ax.fill_between(h.index, lower_bound, jvalues, where=min2, facecolor='blue',alpha=0.2)
         ax.set_xlabel('time')
         ax.set_ylabel('prize')
-        #plt.show()
-
+        plt.show()
+        
         #显示差
         fig,ax = plt.subplots(1)
         minus=j.values-h.values
         ax.scatter(j.index, minus, linewidths=5, label='minus', color='blue')
         for x in range(len(minus)):
             ax.fill_between(j.index[x:x+1],0,minus[x],facecolor='black',alpha=1)
-        ax.fill_between(timesery.index,-100, 100, facecolor='blue',alpha=0.2)
-        axis=ax.yaxis
-        for line in ax.yaxis.get_ticklines():
-            line.set_markeredgewidth(1)
-            line.set_markersize(560)
-            line.set_color('black')
+        ax.fill_between(j.index,-100, 100, facecolor='blue',alpha=0.2)
+        plt.axhline(0,c='black',lw=2)
+        plt.xlim(j.index[0]-datetime.timedelta(0,5),j.index[0]+datetime.timedelta(0,155))
         plt.legend()
-        #plt.show()
+        plt.show()
         print('ave',np.mean(minus))
         print('var',np.var(minus))
         print('std',np.std(minus))
-
-        #趋势图
+        
+        #显示趋势正确
         up=[]
         down=[]
         x=0
@@ -134,30 +135,33 @@ for timesery in timeseries:
             plt.fill_between(j.index[x:x+2],12200,13000,facecolor='green',alpha=0.2,label='right')
         for x in down:
             plt.fill_between(j.index[x:x+2],12200,13000,facecolor='red',alpha=0.2,label='wrong')
-        #plt.show()
+        plt.show()
         print('right',float(len(up))/float(len(j)))
         print('wrong',float(len(down))/float(len(j)))
-
+        
+        #h predict
         #期望
         pronut=pd.DataFrame({'pronut':0},index=j.index)
+        x=0
         while x<len(j)-1:
             if h.values[x+1][0]>h.values[x][0]+25:
                 pronut.values[x][0]=j.values[x+1][0]-j.values[x][0]
+                print x
+                print pronut.values[x][0]
             elif h.values[x+1][0]<h.values[x][0]-25:
                 pronut.values[x][0]=j.values[x][0]-j.values[x+1][0]
+                print x
+                print pronut.values[x][0]
             x+=1
         print('ave',np.mean(pronut))
         print('var',np.var(pronut))
         print('std',np.std(pronut))
         fig,ax=plt.subplots(1)
-        ax.scatter(pronut.index,pronut.values, linewidths=5, label='pronut', color='blue')
+        ax.scatter(pronut.index,pronut.values, linewidths=5, label='profit', color='blue')
         for x in range(len(pronut)):
             ax.fill_between(j.index[x:x+1],0,pronut.values[x][0],facecolor='black',alpha=1)
-        axis=ax.yaxis
-        for line in ax.yaxis.get_ticklines():
-            line.set_markeredgewidth(1)
-            line.set_markersize(560)
-            line.set_color('black')
-        plt.legend()
-        #plt.show()
-        c-=10
+        plt.xlim(j.index[0]-datetime.timedelta(0,5),j.index[0]+datetime.timedelta(0,155))
+        plt.axhline(0,c='black',lw=2)
+        plt.axhline(-100,c='black',lw=1)
+        plt.axhline(100,c='black',lw=1)
+        plt.show()
